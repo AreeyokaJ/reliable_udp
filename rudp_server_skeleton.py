@@ -18,7 +18,7 @@ Tips:
 import socket, struct
 
 # ===================== CONFIG (EDIT YOUR PORT) =====================
-ASSIGNED_PORT = 30077  # <-- REPLACE with your assigned UDP port
+ASSIGNED_PORT = 30045  # <-- REPLACE with your assigned UDP port
 # ==================================================================
 
 # --- Protocol type codes (1 byte) ---
@@ -57,18 +57,33 @@ def main():
         # ============ PHASE 1: HANDSHAKE (YOU IMPLEMENT) ============
         if not established:
             # TODO:
+           
             #  - If this is a SYN and we are not established:
             #       * set client_addr = addr
             #       * print('[SERVER] got SYN from', addr)
             #       * send SYN-ACK to client_addr
             #       * continue
+    
             #  - If this is the final ACK from the same client:
             #       * print('[SERVER] handshake complete')
             #       * established = True; expect_seq = 0
             #       * continue
             #  - Ignore packets from others until established
             # HINT: Only accept packets from the first client that sent SYN
-            pass  # <-- replace with your handshake logic
+
+            if tp == SYN:
+                client_addr = addr 
+                print('[SERVER] got SYNC from', addr)
+                packet = pack_msg(SYN_ACK, 0, '') #using 0 as seq number for now
+                sock.sendto(packet, addr)
+                continue
+            
+            if tp == ACK and addr == client_addr:
+                print('[SERVER] handshake complete')
+                established = True
+                expect_seq = 0
+                continue 
+       
             continue
         # ============================================================
 

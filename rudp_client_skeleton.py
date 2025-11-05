@@ -17,7 +17,7 @@ import socket, struct, time
 
 # ===================== CONFIG (EDIT HOST/PORT) =====================
 SERVER_HOST = '127.0.0.1'   # server IP or hostname
-ASSIGNED_PORT = 30077       # <-- REPLACE with your assigned UDP port
+ASSIGNED_PORT = 30045       # <-- REPLACE with your assigned UDP port
 SERVER = (SERVER_HOST, ASSIGNED_PORT)
 # ==================================================================
 
@@ -78,13 +78,23 @@ def main():
 
     # ============ PHASE 1: HANDSHAKE (YOU IMPLEMENT) ==============
     # TODO:
+    
     #   - print('[CLIENT] SYN')
     #   - send SYN (seq can be 0)
     #   - wait (with retry) for SYN-ACK
     #   - on success: print('[CLIENT] SYN-ACK')
     #   - send final ACK and print('[CLIENT] Connection established')
     # HINT: You can use send_recv_with_retry() to simplify retry logic.
-    pass  # <-- replace with your handshake code
+
+    print('[CLIENT] SYN')
+    packet = pack_msg(SYN, 0, '')
+    tp, seq = send_recv_with_retry(cli, packet, {SYN_ACK})
+
+    if tp == SYN_ACK:
+        print('[CLIENT] SYN-ACK')
+        packet = pack_msg(ACK, 0, '')
+        cli.sendto(packet, SERVER)
+        print('[CLIENT] Connection established')
     # ===============================================================
 
     # ============ PHASE 2: DATA SEND LOOP (YOU IMPLEMENT) =========
