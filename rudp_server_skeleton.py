@@ -16,6 +16,7 @@ Tips:
   - Only accept packets from the first client after handshake begins.
 """
 import socket, struct
+import random, time
 
 # ===================== CONFIG (EDIT YOUR PORT) =====================
 ASSIGNED_PORT = 30045  # <-- REPLACE with your assigned UDP port
@@ -71,9 +72,9 @@ def main():
             #  - Ignore packets from others until established
             # HINT: Only accept packets from the first client that sent SYN
 
-            if tp == SYN:
+            if tp == SYN and client_addr == None:
                 client_addr = addr 
-                print('[SERVER] got SYNC from', addr)
+                print('[SERVER] got SYN from', addr)
                 packet = pack_msg(SYN_ACK, 0, '') #using 0 as seq number for now
                 sock.sendto(packet, addr)
                 continue
@@ -101,7 +102,21 @@ def main():
             #       * expect_seq += 1
             #   - Else (out-of-order):
             #       * re-ACK the last in-order packet (expect_seq - 1)
-            pass  # <-- replace with your data logic
+
+            if seq == expect_seq:
+                print("Data: ", pkt.decode('utf-8', errors='ignore')) 
+
+                time_delay = random.randint(100, 1000)
+                time.sleep(time_delay/1000)
+
+                packet = pack_msg(DATA_ACK, expect_seq, '')
+                sock.sendto(packet, addr)
+                expect_seq += 1
+            else:
+               #maybe print("[SERVER] out of sequence: resending ack w/ expect_seq - 1")
+                packet = pack_msg(DATA_ACK, expect_seq - 1, '')
+                sock.sendto(packet, addr)
+                
             continue
         # ============================================================
 
@@ -111,7 +126,13 @@ def main():
             #   - print('[SERVER] FIN received, closing')
             #   - send FIN-ACK to client_addr
             #   - reset state: established=False; client_addr=None; expect_seq=0
-            pass  # <-- replace with your teardown logic
+
+            print('[SERVER] FIN received, closing')
+            packet = pack_msg(FIN_ACK, expect_seq, '')
+            sock.sendto(packet, addr)
+            established = False 
+            client_addr = None 
+            expect_seq = 0 
             continue
         # ============================================================
 

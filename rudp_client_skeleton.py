@@ -14,6 +14,7 @@ YOU MUST IMPLEMENT:
 Use Wireshark with: udp.port == <your_assigned_port>
 """
 import socket, struct, time
+import sys
 
 # ===================== CONFIG (EDIT HOST/PORT) =====================
 SERVER_HOST = '127.0.0.1'   # server IP or hostname
@@ -23,7 +24,7 @@ SERVER = (SERVER_HOST, ASSIGNED_PORT)
 
 # Timing/reliability parameters
 RTO = 0.5        # retransmission timeout (seconds)
-RETRIES = 5      # max retries per send
+RETRIES = 50      # max retries per send
 CHUNK = 200      # bytes per DATA chunk
 
 # --- Protocol type codes (1 byte) ---
@@ -66,12 +67,18 @@ def send_recv_with_retry(sock, pkt, expect_types, expect_seq=None):
         try:
             resp, _ = sock.recvfrom(2048)
             tp, s, _ = unpack_msg(resp)
+
             if tp in expect_types and (expect_seq is None or s == expect_seq):
                 return tp, s
         except socket.timeout:
             # retry on timeout
             continue
     return None, None
+
+def split_into_bytes(s, chunk_size=200):
+    data = s.encode('utf-8')
+    chunks = [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
+    return chunks 
 
 def main():
     cli = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -96,7 +103,8 @@ def main():
         cli.sendto(packet, SERVER)
         print('[CLIENT] Connection established')
     # ===============================================================
-
+    
+  
     # ============ PHASE 2: DATA SEND LOOP (YOU IMPLEMENT) =========
     # TODO:
     #   - Convert MESSAGE to bytes
@@ -106,7 +114,19 @@ def main():
     #       * send DATA, then wait (with retry) for DATA-ACK with same seq
     #       * on success print(f'[CLIENT] ACK seq={seq}')
     #       * on failure, exit with a message
-    pass  # <-- replace with your data send loop
+    
+    message_chunks = split_into_bytes(MESSAGE)
+
+    for i, chunk in enumerate(message_chunks):
+        print(f'[CLIENT] DATA seq={i}')
+        packet = pack_msg(DATA, i, chunk)
+        tp, seq = send_recv_with_retry(cli, packet, {DATA_ACK}, i)
+
+        if tp:
+            print(f'[CLIENT] ACK seq={i}')
+        else:
+            sys.exit("ACK missing")
+
     # ===============================================================
 
     # ============ PHASE 3: TEARDOWN (YOU IMPLEMENT) ===============
@@ -114,8 +134,17 @@ def main():
     #   - print('[CLIENT] FIN')
     #   - send FIN and wait (with retry) for FIN-ACK
     #   - on success print('[CLIENT] Connection closed')
-    pass  # <-- replace with your teardown code
-    # ===============================================================
+            
+    print('[CLIENT] FIN')
+    
+    last_seq = len(message_chunks)
+    packet = pack_msg(FIN, last_seq, '')
+
+    tp, seq = send_recv_with_retry(cli, packet, {FIN_ACK}, last_seq)
+  
+    if tp == FIN_ACK:
+        print('[CLIENT] Connection closed')
+    
 
     cli.close()
 
